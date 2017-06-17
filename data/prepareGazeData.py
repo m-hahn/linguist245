@@ -1,3 +1,11 @@
+# Script for downsampling output of E-Prime/Tobii gaze file
+
+# specify the names of the gaze data files
+csv_files = ["FixedPositionAOI-10-1.gazedata", "FixedPositionAOI-8-1.gazedata"]
+
+# The file expects Praat annotation for the acoustic stimuli in acoustic/, so it can
+# align the beginning of the downsampled output with the onset of the initial consonant.
+
 import csv
 import os
 
@@ -14,7 +22,6 @@ def readCSVIntoDictList(fileName,delimiter):
  keylist = []
  counter = 0
  for row in resultsfile:
-     #print ' -- '.join(row)
      if counter == 0:
         keylist = row
      elif counter > IGNORE_ROWS:
@@ -27,29 +34,14 @@ def readCSVIntoDictList(fileName,delimiter):
      counter += 1
  return results
 
-if False:
- criticalStimuli = {}
- with open("stimuli.csv") as stimulusFile:
-  stimuli = stimulusFile.read().split("\n")
-  critical = stimuli[stimuli.index("CRITICAL")+1:]
-  for line in critical:
-    line = line.split("\t")
-    if len(line) < 2:
-      continue
-    assert(not(line[6] in criticalStimuli))
-    criticalStimuli[line[6]] = line
 
- print(criticalStimuli)
-
-csv_files = filter(lambda x:x.endswith(".gazedata"), os.listdir("."))
-#   ["FixedPositionAOI-1-1.gazedata","FixedPositionAOI-2-1.gazedata"]
 results = []
 for csvName in csv_files:
    results += readCSVIntoDictList(csvName,"\t")
 position = 0
 trialIDs = map(lambda x:x["BackColor"], results)
 
-print("\t".join(map(str,['targetFix','distractorFix','othersFix','startOfBin','trialID','target','distractor','sound','absoluteTime', 'Critical.Or.Not'])))
+print("\t".join(map(str,['targetFix','distractorFix','othersFix','startOfBin','trialID','target','distractor','sound','absoluteTime', 'Critical.Or.Not','Participant'])))
 
 
 while True:
@@ -58,6 +50,7 @@ while True:
   auditory = results[position]["Prime"]
   image1 = results[position]["AOI1"]
   image2 = results[position]["AOI2"]
+  participant = results[position]["Subject"]
   firstOtherIndex = position
   firstStimulusIndex = -1
   for k in range(position,len(results)):
@@ -74,7 +67,7 @@ while True:
   soundFile = trialData[0]["Sound"]
 
   onsetInSoundFile = 0
-  with open("ZOOM2trimmedPost/trimmedZOOM2"+soundFile+"-marked.TextGrid", "r") as soundFileStream:
+  with open("acoustic/sound-"+soundFile+"-marked.TextGrid", "r") as soundFileStream:
     soundFileStream = soundFileStream.read().split("\n")
     if "C" in currentTrial:
       i1 = soundFileStream.index("        intervals [2]:")
@@ -83,12 +76,6 @@ while True:
       assert "xmax" in soundFileStream[i1+2]
       onsetInSoundFile = float(soundFileStream[i1+2].split(" = ")[1])
   onsetTime = float(trialData[0]["TETTime"]) + onsetInSoundFile * 1000
-#  print(float(trialData[0]["TETTime"]))
-#  print(onsetInSoundFile)
-#  print(onsetTime)
-#  position = firstOtherIndex
-#  continue
-
   fixationsPerBin = []
   BIN_LENGTH = 10
   currentStart = onsetTime
@@ -106,13 +93,10 @@ while True:
              currentBin['distractor'] += 1
           else:
              currentBin['others'] += 1
-#          currentBin[int(row["AOI"])-1] += 1
   time = 0
   for fixBin in fixationsPerBin:
-    print("\t".join(map(str,[fixBin['target'],fixBin['distractor'],fixBin['others'],time,currentTrial, trialData[0]["Target"], trialData[0]["Distractor"],  soundFile ,onsetTime + time, currentTrial[0]  ])))
+    print("\t".join(map(str,[fixBin['target'],fixBin['distractor'],fixBin['others'],time,currentTrial, trialData[0]["Target"], trialData[0]["Distractor"],  soundFile ,onsetTime + time, currentTrial[0], participant  ])))
     time += BIN_LENGTH
- # print(fixationsPerBin)
-#  print(len(fixationsPerBin))
   position = firstOtherIndex
   
 

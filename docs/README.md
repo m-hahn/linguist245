@@ -1,1 +1,3 @@
-This directory will contain the documentation of Michael's project.
+# Documentation
+
+This directory contains the documentation of the project. 
